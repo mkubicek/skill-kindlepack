@@ -31,11 +31,11 @@ For "Loop Engineering" by Addy Osmani:
 ```json
 {
   "thesis": "Build systems that keep improving",
-  "anchors": ["FIND", "ACT", "CHECK"],
+  "anchors": ["EVAL LOOPS", "TOOL CONTEXT", "VERIFIED STATE"],
   "descriptors": [
-    "surface the next useful task",
-    "execute with tools and context",
-    "verify, store state, continue"
+    "measure, improve, repeat",
+    "agents need state and tools",
+    "prove each iteration worked"
   ]
 }
 ```

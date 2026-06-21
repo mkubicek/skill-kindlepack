@@ -26,10 +26,10 @@ DEFAULT_FONTS = (
 )
 
 SOURCE_GLYPHS = {
-    "x": "X",
+    "x": "X ARTICLE",
     "ghost": "GHOST",
     "research_pdf": "PDF",
-    "web": "WEB",
+    "web": "ARTICLE",
     "markdown": "MD",
 }
 
@@ -83,9 +83,9 @@ def render_cover(
     _draw_text_right(draw, (right, 224), header_right, font_path, 42, MUTED)
     draw.line((margin, 330, right, 330), fill=RULE, width=4)
 
-    title_lines = _wrap_title(metadata.title)
-    title_size = _fit_multiline(draw, title_lines, font_path, 1328, 455, 210, 132)
-    y = 468
+    title_lines = _wrap_title(draw, metadata.title, font_path, max_width=1160, max_lines=4)
+    title_size = _fit_multiline(draw, title_lines, font_path, 1160, 580, 210, 108)
+    y = 432
     for line in title_lines:
         _draw_text(draw, (margin, y), line.upper(), font_path, title_size, INK)
         y += int(title_size * 1.06)
@@ -107,15 +107,13 @@ def render_cover(
         y = row_y[idx]
         draw.line((margin, y - 34, right, y - 34), fill=(45, 47, 48), width=2)
         _draw_text(draw, (margin, y), f"0{idx + 1}", font_path, 48, DIM)
-        anchor_size = _fit_single(draw, anchor, font_path, 725, 128, 104)
+        anchor_size = _fit_single(draw, anchor, font_path, 940, 124, 78)
         _draw_text(draw, (margin + 180, y - 18), anchor, font_path, anchor_size, INK)
         if descriptor:
             descriptor_size = _fit_single(draw, descriptor, font_path, 880, 42, 32)
             _draw_text(draw, (margin + 184, y + 112), descriptor, font_path, descriptor_size, MUTED)
 
     draw.line((margin, 2298, right, 2298), fill=RULE, width=4)
-    _draw_text(draw, (margin, 2378), "KINDLEPACK", font_path, 38, DIM)
-
     stem = _artifact_stem(metadata, cues)
     cover_path = output / f"{stem}.png"
     thumbnail_path = output / f"{stem}-thumb-260w.png"
@@ -137,7 +135,7 @@ def _validate_render_budget(metadata: CoverMetadata, cues: SummaryCues) -> None:
     if len(metadata.author.strip()) > 48:
         raise RenderNeedsShorterText("author exceeds 48 characters")
     for anchor in cues.anchors:
-        if len(anchor) > 16:
+        if len(anchor) > 24:
             raise RenderNeedsShorterText(f"anchor too long for thumbnail budget: {anchor}")
     for descriptor in cues.descriptors:
         if len(descriptor) > 48:
@@ -195,7 +193,14 @@ def _fit_multiline(
     raise RenderNeedsShorterText("multi-line text does not fit at floor size")
 
 
-def _wrap_title(title: str) -> list[str]:
+def _wrap_title(
+    draw: ImageDraw.ImageDraw,
+    title: str,
+    path: str,
+    *,
+    max_width: int,
+    max_lines: int,
+) -> list[str]:
     words = title.strip().split()
     if not words:
         raise RenderNeedsShorterText("title is required")
@@ -204,17 +209,20 @@ def _wrap_title(title: str) -> list[str]:
 
     lines: list[str] = []
     current: list[str] = []
+    wrap_size = 150 if len(words) <= 3 else 110
+    font = _font(path, wrap_size)
     for word in words:
         candidate = " ".join([*current, word])
-        if len(candidate) <= 16 or not current:
+        width = draw.textbbox((0, 0), candidate.upper(), font=font)[2]
+        if width <= max_width or not current:
             current.append(word)
         else:
             lines.append(" ".join(current))
             current = [word]
     if current:
         lines.append(" ".join(current))
-    if len(lines) > 3:
-        raise RenderNeedsShorterText("title wraps beyond three lines")
+    if len(lines) > max_lines:
+        raise RenderNeedsShorterText(f"title wraps beyond {max_lines} lines")
     return lines
 
 

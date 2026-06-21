@@ -9,17 +9,17 @@ def test_validates_loop_engineering_example():
     cues = validate_summary_payload(
         {
             "thesis": "Build systems that keep improving",
-            "anchors": ["FIND", "ACT", "CHECK"],
+            "anchors": ["EVAL LOOPS", "TOOL CONTEXT", "VERIFIED STATE"],
             "descriptors": [
-                "surface the next useful task",
-                "execute with tools and context",
-                "verify, store state, continue",
+                "measure, improve, repeat",
+                "agents need state and tools",
+                "prove each iteration worked",
             ],
         }
     )
 
     assert cues.thesis == "Build systems that keep improving"
-    assert cues.anchors == ("FIND", "ACT", "CHECK")
+    assert cues.anchors == ("EVAL LOOPS", "TOOL CONTEXT", "VERIFIED STATE")
 
 
 def test_parse_requires_strict_json_object():

@@ -14,9 +14,9 @@ Coordinates:
 - outer margin: `136`
 - source/date row baseline: `230`
 - top rule: `330`
-- title box: `y=470..925`
+- title box: `y=432..1012`, max content width `1160`, up to four lines
 - thesis box: `y=1060..1320`
 - anchor rows: `y=1488`, `1718`, `1948`
-- footer baseline: `2378`
+- bottom rule: `2298`; no product footer/branding text
 
 The grid is intentionally stable across every source type so Kindle library covers read as one series.

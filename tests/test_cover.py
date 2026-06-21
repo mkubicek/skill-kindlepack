@@ -12,11 +12,11 @@ def test_render_cover_emits_png_and_thumbnail(tmp_path: Path):
         CoverMetadata(title="Loop Engineering", author="Addy Osmani", source_type="x"),
         SummaryCues(
             thesis="Build systems that keep improving",
-            anchors=("FIND", "ACT", "CHECK"),
+            anchors=("EVAL LOOPS", "TOOL CONTEXT", "VERIFIED STATE"),
             descriptors=(
-                "surface the next useful task",
-                "execute with tools and context",
-                "verify, store state, continue",
+                "measure, improve, repeat",
+                "agents need state and tools",
+                "prove each iteration worked",
             ),
         ),
         tmp_path,
@@ -34,7 +34,7 @@ def test_render_fails_when_anchor_exceeds_budget(tmp_path: Path):
             CoverMetadata(title="Readable Cover", author="Milan", source_type="web"),
             SummaryCues(
                 thesis="Make covers readable",
-                anchors=("THIS ANCHOR IS HUGE", "ACT", "CHECK"),
+                anchors=("THIS ANCHOR IS FAR TOO HUGE", "ACT", "CHECK"),
                 descriptors=("", "", ""),
             ),
             tmp_path,
@@ -44,7 +44,7 @@ def test_render_fails_when_anchor_exceeds_budget(tmp_path: Path):
 def test_render_allows_three_line_titles(tmp_path: Path):
     result = render_cover(
         CoverMetadata(title="Designing Useful Feedback Loops for Agents", author="Milan", source_type="web"),
-        SummaryCues(thesis="Make agent work inspectable", anchors=("FIND", "ACT", "CHECK")),
+        SummaryCues(thesis="Make agent work inspectable", anchors=("EVAL LOOPS", "TOOL CONTEXT", "STATE")),
         tmp_path,
     )
 
@@ -54,7 +54,7 @@ def test_render_allows_three_line_titles(tmp_path: Path):
 def test_missing_configured_font_records_warning(tmp_path: Path):
     result = render_cover(
         CoverMetadata(title="Loop Engineering", author="Addy Osmani", source_type="x"),
-        SummaryCues(thesis="Build systems that keep improving", anchors=("FIND", "ACT", "CHECK")),
+        SummaryCues(thesis="Build systems that keep improving", anchors=("EVAL LOOPS", "TOOL CONTEXT", "STATE")),
         tmp_path,
         cover_font="/missing/font.ttf",
     )
