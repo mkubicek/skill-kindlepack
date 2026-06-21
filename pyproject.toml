@@ -1,0 +1,21 @@
+[project]
+name = "skill-kindlepack"
+version = "0.1.0"
+description = "Kindle reading-product packaging skill with deterministic Pillow covers."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "ebooklib>=0.19",
+  "markdown>=3.7",
+  "pillow>=11.0.0",
+  "pypdf>=5.0.0",
+]
+
+[dependency-groups]
+dev = [
+  "pytest>=8.0.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]

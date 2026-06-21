@@ -1,0 +1,235 @@
+from __future__ import annotations
+
+from dataclasses import dataclass
+from pathlib import Path
+import hashlib
+import json
+import textwrap
+
+from PIL import Image, ImageDraw, ImageFont
+
+from .summary import SummaryCues
+
+CANVAS = (1600, 2560)
+THUMB_WIDTH = 260
+
+BG = (17, 19, 20)
+INK = (246, 244, 238)
+MUTED = (184, 183, 176)
+DIM = (130, 132, 128)
+RULE = (98, 99, 95)
+
+DEFAULT_FONTS = (
+    "/System/Library/Fonts/Supplemental/Arial Bold.ttf",
+    "/System/Library/Fonts/HelveticaNeue.ttc",
+    "/System/Library/Fonts/SFNS.ttf",
+)
+
+SOURCE_GLYPHS = {
+    "x": "X",
+    "ghost": "GHOST",
+    "research_pdf": "PDF",
+    "web": "WEB",
+    "markdown": "MD",
+}
+
+
+class RenderNeedsShorterText(ValueError):
+    """Raised when deterministic budget/floor checks fail."""
+
+
+@dataclass(frozen=True)
+class CoverMetadata:
+    title: str
+    author: str
+    source_type: str
+    date: str | None = None
+
+
+@dataclass(frozen=True)
+class CoverRenderResult:
+    cover_path: Path
+    thumbnail_path: Path
+    font_fallback: bool
+    warnings: tuple[str, ...] = ()
+
+
+def render_cover(
+    metadata: CoverMetadata,
+    cues: SummaryCues,
+    output_dir: str | Path,
+    *,
+    cover_font: str | None = None,
+) -> CoverRenderResult:
+    output = Path(output_dir)
+    output.mkdir(parents=True, exist_ok=True)
+
+    _validate_render_budget(metadata, cues)
+    font_path, font_fallback = _resolve_font(cover_font)
+    warnings: list[str] = []
+    if font_fallback:
+        warnings.append(f"cover_font unavailable; used {font_path}")
+
+    img = Image.new("RGB", CANVAS, BG)
+    draw = ImageDraw.Draw(img)
+    margin = 136
+    right = CANVAS[0] - margin
+
+    source = SOURCE_GLYPHS.get(metadata.source_type, metadata.source_type.upper())
+    date = metadata.date or ""
+    header_right = f"{source}  {date}".strip()
+
+    _draw_text(draw, (margin, 224), metadata.author.upper(), font_path, 48, MUTED)
+    _draw_text_right(draw, (right, 224), header_right, font_path, 42, MUTED)
+    draw.line((margin, 330, right, 330), fill=RULE, width=4)
+
+    title_lines = _wrap_title(metadata.title)
+    title_size = _fit_multiline(draw, title_lines, font_path, 1328, 455, 210, 132)
+    y = 468
+    for line in title_lines:
+        _draw_text(draw, (margin, y), line.upper(), font_path, title_size, INK)
+        y += int(title_size * 1.06)
+
+    draw.line((margin, 1018, right, 1018), fill=RULE, width=5)
+    thesis_lines = textwrap.wrap(cues.thesis, width=25)
+    if len(thesis_lines) > 2:
+        raise RenderNeedsShorterText("thesis wraps beyond two lines")
+    thesis_size = _fit_multiline(draw, thesis_lines, font_path, 1328, 238, 106, 86)
+    y = 1118
+    for line in thesis_lines:
+        _draw_text(draw, (margin, y), line, font_path, thesis_size, INK)
+        y += int(thesis_size * 1.18)
+
+    draw.line((margin, 1400, right, 1400), fill=RULE, width=4)
+
+    row_y = [1490, 1722, 1954]
+    for idx, (anchor, descriptor) in enumerate(zip(cues.anchors, cues.descriptors, strict=True)):
+        y = row_y[idx]
+        draw.line((margin, y - 34, right, y - 34), fill=(45, 47, 48), width=2)
+        _draw_text(draw, (margin, y), f"0{idx + 1}", font_path, 48, DIM)
+        anchor_size = _fit_single(draw, anchor, font_path, 725, 128, 104)
+        _draw_text(draw, (margin + 180, y - 18), anchor, font_path, anchor_size, INK)
+        if descriptor:
+            descriptor_size = _fit_single(draw, descriptor, font_path, 880, 42, 32)
+            _draw_text(draw, (margin + 184, y + 112), descriptor, font_path, descriptor_size, MUTED)
+
+    draw.line((margin, 2298, right, 2298), fill=RULE, width=4)
+    _draw_text(draw, (margin, 2378), "KINDLEPACK", font_path, 38, DIM)
+
+    stem = _artifact_stem(metadata, cues)
+    cover_path = output / f"{stem}.png"
+    thumbnail_path = output / f"{stem}-thumb-260w.png"
+    img.save(cover_path, quality=95)
+    thumb_height = round(CANVAS[1] * THUMB_WIDTH / CANVAS[0])
+    img.resize((THUMB_WIDTH, thumb_height), Image.Resampling.LANCZOS).save(thumbnail_path, quality=95)
+
+    return CoverRenderResult(
+        cover_path=cover_path,
+        thumbnail_path=thumbnail_path,
+        font_fallback=font_fallback,
+        warnings=tuple(warnings),
+    )
+
+
+def _validate_render_budget(metadata: CoverMetadata, cues: SummaryCues) -> None:
+    if len(metadata.title.strip()) > 90:
+        raise RenderNeedsShorterText("title exceeds 90 characters")
+    if len(metadata.author.strip()) > 48:
+        raise RenderNeedsShorterText("author exceeds 48 characters")
+    for anchor in cues.anchors:
+        if len(anchor) > 16:
+            raise RenderNeedsShorterText(f"anchor too long for thumbnail budget: {anchor}")
+    for descriptor in cues.descriptors:
+        if len(descriptor) > 48:
+            raise RenderNeedsShorterText("descriptor exceeds 48 characters")
+
+
+def _resolve_font(configured: str | None) -> tuple[str, bool]:
+    candidates = [configured] if configured else []
+    candidates.extend(DEFAULT_FONTS)
+    for candidate in candidates:
+        if candidate and Path(candidate).exists():
+            return candidate, candidate != configured if configured else candidate != DEFAULT_FONTS[0]
+    return "", True
+
+
+def _font(path: str, size: int) -> ImageFont.ImageFont:
+    if path:
+        return ImageFont.truetype(path, size)
+    return ImageFont.load_default(size=size)
+
+
+def _draw_text(draw: ImageDraw.ImageDraw, xy: tuple[int, int], text: str, path: str, size: int, fill: tuple[int, int, int]) -> None:
+    draw.text(xy, text, font=_font(path, size), fill=fill)
+
+
+def _draw_text_right(draw: ImageDraw.ImageDraw, xy: tuple[int, int], text: str, path: str, size: int, fill: tuple[int, int, int]) -> None:
+    fnt = _font(path, size)
+    box = draw.textbbox((0, 0), text, font=fnt)
+    draw.text((xy[0] - (box[2] - box[0]), xy[1]), text, font=fnt, fill=fill)
+
+
+def _fit_single(draw: ImageDraw.ImageDraw, text: str, path: str, max_width: int, start: int, floor: int) -> int:
+    for size in range(start, floor - 1, -4):
+        box = draw.textbbox((0, 0), text, font=_font(path, size))
+        if box[2] - box[0] <= max_width:
+            return size
+    raise RenderNeedsShorterText(f"text does not fit at floor size: {text}")
+
+
+def _fit_multiline(
+    draw: ImageDraw.ImageDraw,
+    lines: list[str],
+    path: str,
+    max_width: int,
+    max_height: int,
+    start: int,
+    floor: int,
+) -> int:
+    for size in range(start, floor - 1, -4):
+        fnt = _font(path, size)
+        widths = [draw.textbbox((0, 0), line, font=fnt)[2] for line in lines]
+        height = len(lines) * int(size * 1.1)
+        if max(widths, default=0) <= max_width and height <= max_height:
+            return size
+    raise RenderNeedsShorterText("multi-line text does not fit at floor size")
+
+
+def _wrap_title(title: str) -> list[str]:
+    words = title.strip().split()
+    if not words:
+        raise RenderNeedsShorterText("title is required")
+    if len(words) == 1:
+        return words
+
+    lines: list[str] = []
+    current: list[str] = []
+    for word in words:
+        candidate = " ".join([*current, word])
+        if len(candidate) <= 16 or not current:
+            current.append(word)
+        else:
+            lines.append(" ".join(current))
+            current = [word]
+    if current:
+        lines.append(" ".join(current))
+    if len(lines) > 3:
+        raise RenderNeedsShorterText("title wraps beyond three lines")
+    return lines
+
+
+def _artifact_stem(metadata: CoverMetadata, cues: SummaryCues) -> str:
+    payload = json.dumps(
+        {
+            "title": metadata.title,
+            "author": metadata.author,
+            "source_type": metadata.source_type,
+            "date": metadata.date,
+            "thesis": cues.thesis,
+            "anchors": cues.anchors,
+        },
+        sort_keys=True,
+    )
+    digest = hashlib.sha256(payload.encode("utf-8")).hexdigest()[:10]
+    slug = "".join(ch.lower() if ch.isalnum() else "-" for ch in metadata.title).strip("-")
+    return f"{slug[:54].strip('-') or 'cover'}-{digest}"
