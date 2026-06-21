@@ -52,6 +52,26 @@ def test_header_keeps_source_date_out_of_kindle_badge_corner(tmp_path: Path):
     assert _non_background_pixels(top_right_badge_zone) == 0
 
 
+def test_descriptor_text_uses_lower_section_space(tmp_path: Path):
+    result = render_cover(
+        CoverMetadata(title="Loop Engineering", author="Addy Osmani", source_type="x", date="June 7, 2026"),
+        SummaryCues(
+            thesis="Build systems that keep improving",
+            anchors=("EVAL LOOPS", "TOOL CONTEXT", "VERIFIED STATE"),
+            descriptors=(
+                "measure, improve, repeat",
+                "agents need state and tools",
+                "prove each iteration worked",
+            ),
+        ),
+        tmp_path,
+    )
+
+    image = Image.open(result.cover_path)
+    lower_summary_zone = image.crop((300, 1625, 1280, 2310))
+    assert _non_background_pixels(lower_summary_zone) > 16_000
+
+
 def test_render_fails_when_anchor_exceeds_budget(tmp_path: Path):
     with pytest.raises(RenderNeedsShorterText, match="anchor too long"):
         render_cover(

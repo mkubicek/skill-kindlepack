@@ -77,10 +77,11 @@ def render_cover(
 
     header_label = _header_label(metadata)
 
-    author_size = _fit_single(draw, metadata.author.upper(), font_path, 900, 70, 54)
-    _draw_text(draw, (margin, 178), metadata.author.upper(), font_path, author_size, MUTED)
-    _draw_text(draw, (margin, 268), header_label, font_path, 42, MUTED)
-    draw.line((margin, 360, right, 360), fill=RULE, width=4)
+    author_size = _fit_single(draw, metadata.author.upper(), font_path, 1000, 84, 62)
+    _draw_text(draw, (margin, 168), metadata.author.upper(), font_path, author_size, MUTED)
+    header_size = _fit_single(draw, header_label, font_path, 1000, 50, 42)
+    _draw_text(draw, (margin, 280), header_label, font_path, header_size, MUTED)
+    draw.line((margin, 380, right, 380), fill=RULE, width=4)
 
     title_lines = _wrap_title(draw, metadata.title, font_path, max_width=1160, max_lines=4)
     title_size = _fit_multiline(draw, title_lines, font_path, 1160, 580, 210, 108)
@@ -109,8 +110,12 @@ def render_cover(
         anchor_size = _fit_single(draw, anchor, font_path, 940, 124, 78)
         _draw_text(draw, (margin + 180, y - 18), anchor, font_path, anchor_size, INK)
         if descriptor:
-            descriptor_size = _fit_single(draw, descriptor, font_path, 980, 58, 44)
-            _draw_text(draw, (margin + 184, y + 122), descriptor, font_path, descriptor_size, MUTED)
+            descriptor_lines = _wrap_to_width(draw, descriptor, font_path, max_width=980, size=66, max_lines=2)
+            descriptor_size = _fit_multiline(draw, descriptor_lines, font_path, 980, 138, 66, 52)
+            descriptor_y = y + 118
+            for line in descriptor_lines:
+                _draw_text(draw, (margin + 184, descriptor_y), line, font_path, descriptor_size, MUTED)
+                descriptor_y += int(descriptor_size * 1.12)
 
     draw.line((margin, 2382, right, 2382), fill=RULE, width=4)
     stem = _artifact_stem(metadata, cues)
@@ -232,6 +237,37 @@ def _wrap_title(
         lines.append(" ".join(current))
     if len(lines) > max_lines:
         raise RenderNeedsShorterText(f"title wraps beyond {max_lines} lines")
+    return lines
+
+
+def _wrap_to_width(
+    draw: ImageDraw.ImageDraw,
+    text: str,
+    path: str,
+    *,
+    max_width: int,
+    size: int,
+    max_lines: int,
+) -> list[str]:
+    words = text.strip().split()
+    if not words:
+        return []
+
+    font = _font(path, size)
+    lines: list[str] = []
+    current: list[str] = []
+    for word in words:
+        candidate = " ".join([*current, word])
+        width = draw.textbbox((0, 0), candidate, font=font)[2]
+        if width <= max_width or not current:
+            current.append(word)
+        else:
+            lines.append(" ".join(current))
+            current = [word]
+    if current:
+        lines.append(" ".join(current))
+    if len(lines) > max_lines:
+        raise RenderNeedsShorterText(f"text wraps beyond {max_lines} lines: {text}")
     return lines
 
 

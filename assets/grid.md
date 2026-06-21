@@ -12,14 +12,14 @@ Palette:
 Coordinates:
 
 - outer margin: `136`
-- metadata stack: author at `y=178`, source/date at `y=268`, both left-aligned.
+- metadata stack: author at `y=168`, source/date at `y=280`, both left-aligned.
   The top-right corner is intentionally empty because Kindle library overlays
   badges such as `New` and progress ribbons there.
-- top rule: `360`
+- top rule: `380`
 - title box: `y=458..1038`, max content width `1160`, up to four lines
 - thesis box: `y=1080..1340`
-- anchor rows: `y=1510`, `1810`, `2110`; descriptor text expands to use the
-  vertical space when only three anchors are present
+- anchor rows: `y=1510`, `1810`, `2110`; descriptor text expands up to two
+  large lines to use the vertical space when only three anchors are present
 - bottom rule: `2382`; no product footer/branding text
 
 The grid is intentionally stable across every source type so Kindle library covers read as one series.
