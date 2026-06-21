@@ -75,9 +75,7 @@ def render_cover(
     margin = 136
     right = CANVAS[0] - margin
 
-    source = SOURCE_GLYPHS.get(metadata.source_type, metadata.source_type.upper())
-    date = metadata.date or ""
-    header_right = f"{source}  {date}".strip()
+    header_right = _header_label(metadata)
 
     _draw_text(draw, (margin, 224), metadata.author.upper(), font_path, 48, MUTED)
     _draw_text_right(draw, (right, 224), header_right, font_path, 42, MUTED)
@@ -134,6 +132,8 @@ def _validate_render_budget(metadata: CoverMetadata, cues: SummaryCues) -> None:
         raise RenderNeedsShorterText("title exceeds 90 characters")
     if len(metadata.author.strip()) > 48:
         raise RenderNeedsShorterText("author exceeds 48 characters")
+    if len(_header_label(metadata)) > 42:
+        raise RenderNeedsShorterText("source/date header exceeds 42 characters")
     for anchor in cues.anchors:
         if len(anchor) > 24:
             raise RenderNeedsShorterText(f"anchor too long for thumbnail budget: {anchor}")
@@ -165,6 +165,14 @@ def _draw_text_right(draw: ImageDraw.ImageDraw, xy: tuple[int, int], text: str, 
     fnt = _font(path, size)
     box = draw.textbbox((0, 0), text, font=fnt)
     draw.text((xy[0] - (box[2] - box[0]), xy[1]), text, font=fnt, fill=fill)
+
+
+def _header_label(metadata: CoverMetadata) -> str:
+    source = SOURCE_GLYPHS.get(metadata.source_type, metadata.source_type.upper())
+    date = (metadata.date or "").strip()
+    if not date:
+        return source
+    return f"{source} / {date.upper()}"
 
 
 def _fit_single(draw: ImageDraw.ImageDraw, text: str, path: str, max_width: int, start: int, floor: int) -> int:
