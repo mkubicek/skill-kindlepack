@@ -75,43 +75,44 @@ def render_cover(
     margin = 136
     right = CANVAS[0] - margin
 
-    header_right = _header_label(metadata)
+    header_label = _header_label(metadata)
 
-    _draw_text(draw, (margin, 224), metadata.author.upper(), font_path, 48, MUTED)
-    _draw_text_right(draw, (right, 224), header_right, font_path, 42, MUTED)
-    draw.line((margin, 330, right, 330), fill=RULE, width=4)
+    author_size = _fit_single(draw, metadata.author.upper(), font_path, 900, 70, 54)
+    _draw_text(draw, (margin, 178), metadata.author.upper(), font_path, author_size, MUTED)
+    _draw_text(draw, (margin, 268), header_label, font_path, 42, MUTED)
+    draw.line((margin, 360, right, 360), fill=RULE, width=4)
 
     title_lines = _wrap_title(draw, metadata.title, font_path, max_width=1160, max_lines=4)
     title_size = _fit_multiline(draw, title_lines, font_path, 1160, 580, 210, 108)
-    y = 432
+    y = 458
     for line in title_lines:
         _draw_text(draw, (margin, y), line.upper(), font_path, title_size, INK)
         y += int(title_size * 1.06)
 
-    draw.line((margin, 1018, right, 1018), fill=RULE, width=5)
+    draw.line((margin, 1042, right, 1042), fill=RULE, width=5)
     thesis_lines = textwrap.wrap(cues.thesis, width=25)
     if len(thesis_lines) > 2:
         raise RenderNeedsShorterText("thesis wraps beyond two lines")
     thesis_size = _fit_multiline(draw, thesis_lines, font_path, 1328, 238, 106, 86)
-    y = 1118
+    y = 1138
     for line in thesis_lines:
         _draw_text(draw, (margin, y), line, font_path, thesis_size, INK)
         y += int(thesis_size * 1.18)
 
-    draw.line((margin, 1400, right, 1400), fill=RULE, width=4)
+    draw.line((margin, 1418, right, 1418), fill=RULE, width=4)
 
-    row_y = [1490, 1722, 1954]
+    row_y = [1510, 1810, 2110]
     for idx, (anchor, descriptor) in enumerate(zip(cues.anchors, cues.descriptors, strict=True)):
         y = row_y[idx]
-        draw.line((margin, y - 34, right, y - 34), fill=(45, 47, 48), width=2)
+        draw.line((margin, y - 42, right, y - 42), fill=(45, 47, 48), width=2)
         _draw_text(draw, (margin, y), f"0{idx + 1}", font_path, 48, DIM)
         anchor_size = _fit_single(draw, anchor, font_path, 940, 124, 78)
         _draw_text(draw, (margin + 180, y - 18), anchor, font_path, anchor_size, INK)
         if descriptor:
-            descriptor_size = _fit_single(draw, descriptor, font_path, 880, 42, 32)
-            _draw_text(draw, (margin + 184, y + 112), descriptor, font_path, descriptor_size, MUTED)
+            descriptor_size = _fit_single(draw, descriptor, font_path, 980, 58, 44)
+            _draw_text(draw, (margin + 184, y + 122), descriptor, font_path, descriptor_size, MUTED)
 
-    draw.line((margin, 2298, right, 2298), fill=RULE, width=4)
+    draw.line((margin, 2382, right, 2382), fill=RULE, width=4)
     stem = _artifact_stem(metadata, cues)
     cover_path = output / f"{stem}.png"
     thumbnail_path = output / f"{stem}-thumb-260w.png"

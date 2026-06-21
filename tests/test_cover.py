@@ -7,6 +7,17 @@ from kindlepack.cover import CoverMetadata, RenderNeedsShorterText, _header_labe
 from kindlepack.summary import SummaryCues
 
 
+def _non_background_pixels(image: Image.Image, bg: tuple[int, int, int] = (17, 19, 20)) -> int:
+    pixels = image.load()
+    width, height = image.size
+    count = 0
+    for y in range(height):
+        for x in range(width):
+            if pixels[x, y] != bg:
+                count += 1
+    return count
+
+
 def test_render_cover_emits_png_and_thumbnail(tmp_path: Path):
     result = render_cover(
         CoverMetadata(title="Loop Engineering", author="Addy Osmani", source_type="x"),
@@ -27,6 +38,18 @@ def test_render_cover_emits_png_and_thumbnail(tmp_path: Path):
     assert result.thumbnail_path.exists()
     assert Image.open(result.cover_path).size == (1600, 2560)
     assert Image.open(result.thumbnail_path).size == (260, 416)
+
+
+def test_header_keeps_source_date_out_of_kindle_badge_corner(tmp_path: Path):
+    result = render_cover(
+        CoverMetadata(title="Loop Engineering", author="Addy Osmani", source_type="x", date="June 7, 2026"),
+        SummaryCues(thesis="Build systems that keep improving", anchors=("EVAL LOOPS", "TOOL CONTEXT", "STATE")),
+        tmp_path,
+    )
+
+    image = Image.open(result.cover_path)
+    top_right_badge_zone = image.crop((1080, 120, 1600, 340))
+    assert _non_background_pixels(top_right_badge_zone) == 0
 
 
 def test_render_fails_when_anchor_exceeds_budget(tmp_path: Path):
