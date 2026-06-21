@@ -5,7 +5,7 @@ description: "Package one article or research PDF into a Kindle-ready EPUB/PDF w
 
 # Kindlepack
 
-Use when Milan asks to send a single article, X/Ghost capture, markdown/web text, or research PDF to Kindle with a consistent Kindle Scribe reading experience.
+Use when packaging a single article, X/Ghost capture, markdown/web text, or research PDF for Kindle with a consistent reading experience.
 
 ## Workflow
 

@@ -97,7 +97,7 @@ def test_dynamic_layout_keeps_right_edge_clear_and_fills_safe_height(tmp_path: P
 def test_render_fails_when_anchor_exceeds_budget(tmp_path: Path):
     with pytest.raises(RenderNeedsShorterText, match="anchor too long"):
         render_cover(
-            CoverMetadata(title="Readable Cover", author="Milan", source_type="web"),
+            CoverMetadata(title="Readable Cover", author="Test Author", source_type="web"),
             SummaryCues(
                 thesis="Make covers readable",
                 anchors=("THIS ANCHOR IS FAR TOO HUGE", "ACT", "CHECK"),
@@ -109,7 +109,7 @@ def test_render_fails_when_anchor_exceeds_budget(tmp_path: Path):
 
 def test_render_allows_three_line_titles(tmp_path: Path):
     result = render_cover(
-        CoverMetadata(title="Designing Useful Feedback Loops for Agents", author="Milan", source_type="web"),
+        CoverMetadata(title="Designing Useful Feedback Loops for Agents", author="Test Author", source_type="web"),
         SummaryCues(thesis="Make agent work inspectable", anchors=("EVAL LOOPS", "TOOL CONTEXT", "STATE")),
         tmp_path,
     )
@@ -119,7 +119,7 @@ def test_render_allows_three_line_titles(tmp_path: Path):
 
 def test_long_valid_cover_fits_anchor_and_descriptor_together(tmp_path: Path):
     result = render_cover(
-        CoverMetadata(title="Designing Useful Feedback Loops for Practical Agentic Systems", author="Milan", source_type="web"),
+        CoverMetadata(title="Designing Useful Feedback Loops for Practical Agentic Systems", author="Test Author", source_type="web"),
         SummaryCues(
             thesis="Make agent work inspectable and repeatable",
             anchors=("EVAL LOOPS", "TOOL CONTEXT", "VERIFIED STATE"),
@@ -162,7 +162,7 @@ def test_render_fails_when_source_date_header_exceeds_budget(tmp_path: Path):
         render_cover(
             CoverMetadata(
                 title="Readable Cover",
-                author="Milan",
+                author="Test Author",
                 source_type="research_pdf",
                 date="A very long publication date string that will not fit",
             ),
