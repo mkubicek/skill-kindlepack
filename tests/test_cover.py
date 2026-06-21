@@ -69,7 +69,29 @@ def test_descriptor_text_uses_lower_section_space(tmp_path: Path):
 
     image = Image.open(result.cover_path)
     lower_summary_zone = image.crop((300, 1625, 1280, 2310))
-    assert _non_background_pixels(lower_summary_zone) > 16_000
+    assert _non_background_pixels(lower_summary_zone) > 24_000
+
+
+def test_dynamic_layout_keeps_right_edge_clear_and_fills_safe_height(tmp_path: Path):
+    result = render_cover(
+        CoverMetadata(title="Loop Engineering", author="Addy Osmani", source_type="x", date="June 7, 2026"),
+        SummaryCues(
+            thesis="Build systems that keep improving",
+            anchors=("EVAL LOOPS", "TOOL CONTEXT", "VERIFIED STATE"),
+            descriptors=(
+                "measure, improve, repeat",
+                "agents need state and tools",
+                "prove each iteration worked",
+            ),
+        ),
+        tmp_path,
+    )
+
+    image = Image.open(result.cover_path)
+    right_edge = image.crop((1498, 0, 1600, 2560))
+    summary_safe_zone = image.crop((104, 1280, 1496, 2360))
+    assert _non_background_pixels(right_edge) == 0
+    assert _non_background_pixels(summary_safe_zone) > 200_000
 
 
 def test_render_fails_when_anchor_exceeds_budget(tmp_path: Path):
@@ -89,6 +111,24 @@ def test_render_allows_three_line_titles(tmp_path: Path):
     result = render_cover(
         CoverMetadata(title="Designing Useful Feedback Loops for Agents", author="Milan", source_type="web"),
         SummaryCues(thesis="Make agent work inspectable", anchors=("EVAL LOOPS", "TOOL CONTEXT", "STATE")),
+        tmp_path,
+    )
+
+    assert result.cover_path.exists()
+
+
+def test_long_valid_cover_fits_anchor_and_descriptor_together(tmp_path: Path):
+    result = render_cover(
+        CoverMetadata(title="Designing Useful Feedback Loops for Practical Agentic Systems", author="Milan", source_type="web"),
+        SummaryCues(
+            thesis="Make agent work inspectable and repeatable",
+            anchors=("EVAL LOOPS", "TOOL CONTEXT", "VERIFIED STATE"),
+            descriptors=(
+                "measure, improve, repeat",
+                "agents need state and tools",
+                "prove each iteration worked",
+            ),
+        ),
         tmp_path,
     )
 

@@ -4,7 +4,6 @@ from dataclasses import dataclass
 from pathlib import Path
 import hashlib
 import json
-import textwrap
 
 from PIL import Image, ImageDraw, ImageFont
 
@@ -72,52 +71,65 @@ def render_cover(
 
     img = Image.new("RGB", CANVAS, BG)
     draw = ImageDraw.Draw(img)
-    margin = 136
+    margin = 104
     right = CANVAS[0] - margin
 
     header_label = _header_label(metadata)
 
-    author_size = _fit_single(draw, metadata.author.upper(), font_path, 1000, 84, 62)
-    _draw_text(draw, (margin, 168), metadata.author.upper(), font_path, author_size, MUTED)
+    author_size = _fit_single(draw, metadata.author.upper(), font_path, 1000, 86, 62)
+    _draw_text(draw, (margin, 132), metadata.author.upper(), font_path, author_size, MUTED)
     header_size = _fit_single(draw, header_label, font_path, 1000, 50, 42)
-    _draw_text(draw, (margin, 280), header_label, font_path, header_size, MUTED)
-    draw.line((margin, 380, right, 380), fill=RULE, width=4)
+    _draw_text(draw, (margin, 244), header_label, font_path, header_size, MUTED)
+    draw.line((margin, 370, right, 370), fill=RULE, width=4)
 
-    title_lines = _wrap_title(draw, metadata.title, font_path, max_width=1160, max_lines=4)
-    title_size = _fit_multiline(draw, title_lines, font_path, 1160, 580, 210, 108)
-    y = 458
+    title_lines = [line.upper() for line in _wrap_title(draw, metadata.title, font_path, max_width=right - margin, max_lines=4)]
+    title_size = _fit_multiline(draw, title_lines, font_path, right - margin, 505, 224, 108)
+    y = 452
     for line in title_lines:
-        _draw_text(draw, (margin, y), line.upper(), font_path, title_size, INK)
-        y += int(title_size * 1.06)
+        _draw_text(draw, (margin, y), line, font_path, title_size, INK)
+        y += int(title_size * 1.03)
 
-    draw.line((margin, 1042, right, 1042), fill=RULE, width=5)
-    thesis_lines = textwrap.wrap(cues.thesis, width=25)
-    if len(thesis_lines) > 2:
-        raise RenderNeedsShorterText("thesis wraps beyond two lines")
-    thesis_size = _fit_multiline(draw, thesis_lines, font_path, 1328, 238, 106, 86)
-    y = 1138
+    title_rule_y = max(900, y + 46)
+    draw.line((margin, title_rule_y, right, title_rule_y), fill=RULE, width=5)
+    thesis_lines = _wrap_to_width(draw, cues.thesis, font_path, max_width=right - margin, size=108, max_lines=2)
+    thesis_size = _fit_multiline(draw, thesis_lines, font_path, right - margin, 238, 108, 86)
+    y = title_rule_y + 78
     for line in thesis_lines:
         _draw_text(draw, (margin, y), line, font_path, thesis_size, INK)
-        y += int(thesis_size * 1.18)
+        y += int(thesis_size * 1.15)
 
-    draw.line((margin, 1418, right, 1418), fill=RULE, width=4)
+    summary_top = max(1280, y + 58)
+    summary_bottom = 2360
+    row_height = (summary_bottom - summary_top) // 3
 
-    row_y = [1510, 1810, 2110]
     for idx, (anchor, descriptor) in enumerate(zip(cues.anchors, cues.descriptors, strict=True)):
-        y = row_y[idx]
-        draw.line((margin, y - 42, right, y - 42), fill=(45, 47, 48), width=2)
-        _draw_text(draw, (margin, y), f"0{idx + 1}", font_path, 48, DIM)
-        anchor_size = _fit_single(draw, anchor, font_path, 940, 124, 78)
-        _draw_text(draw, (margin + 180, y - 18), anchor, font_path, anchor_size, INK)
-        if descriptor:
-            descriptor_lines = _wrap_to_width(draw, descriptor, font_path, max_width=980, size=66, max_lines=2)
-            descriptor_size = _fit_multiline(draw, descriptor_lines, font_path, 980, 138, 66, 52)
-            descriptor_y = y + 118
+        row_top = summary_top + idx * row_height
+        draw.line((margin, row_top, right, row_top), fill=(45, 47, 48), width=2)
+        _draw_text(draw, (margin, row_top + 35), f"{idx + 1}", font_path, 50, DIM)
+        anchor_x = margin + 108
+        descriptor_lines = _wrap_to_width(draw, descriptor, font_path, max_width=right - anchor_x, size=82, max_lines=2) if descriptor else []
+        descriptor_min_height = len(descriptor_lines) * int(60 * 1.1)
+        anchor_start = min(134, row_height - descriptor_min_height - 76) if descriptor_lines else 134
+        if anchor_start < 88:
+            raise RenderNeedsShorterText("summary row too short for anchor and descriptor")
+        anchor_size = _fit_single(draw, anchor, font_path, right - anchor_x, anchor_start, 88)
+        _draw_text(draw, (anchor_x, row_top + 20), anchor, font_path, anchor_size, INK)
+        if descriptor_lines:
+            descriptor_size = _fit_multiline(
+                draw,
+                descriptor_lines,
+                font_path,
+                right - anchor_x,
+                row_height - anchor_size - 76,
+                82,
+                60,
+            )
+            descriptor_y = row_top + 48 + anchor_size
             for line in descriptor_lines:
-                _draw_text(draw, (margin + 184, descriptor_y), line, font_path, descriptor_size, MUTED)
+                _draw_text(draw, (anchor_x, descriptor_y), line, font_path, descriptor_size, MUTED)
                 descriptor_y += int(descriptor_size * 1.12)
 
-    draw.line((margin, 2382, right, 2382), fill=RULE, width=4)
+    draw.line((margin, summary_bottom, right, summary_bottom), fill=RULE, width=4)
     stem = _artifact_stem(metadata, cues)
     cover_path = output / f"{stem}.png"
     thumbnail_path = output / f"{stem}-thumb-260w.png"
